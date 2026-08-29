@@ -244,3 +244,10 @@ class BookAppointmentWorkflow implements WorkflowHandlerInterface
   }
 }
 ```
+## Screenshots
+
+### Workflows Editor
+![Workflows Editor](art/workflows-editor.jpg)
+
+### Workflows List
+![Workflows List](art/workflows-list.jpg)
