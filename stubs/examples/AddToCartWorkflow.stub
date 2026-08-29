@@ -1,0 +1,51 @@
+<?php
+
+namespace {{ namespace }};
+
+use HashtagCms\Workflows\Contracts\WorkflowHandlerInterface;
+use HashtagCms\Workflows\Engine\WorkflowContext;
+use HashtagCms\Workflows\Engine\WorkflowResponse;
+
+/**
+ * Example: add an item to the cart (or open a customizer sheet).
+ *
+ * Register with alias WORKFLOW_ADD_TO_CART:
+ *   \HashtagCms\Workflows\Facades\Workflows::register(
+ *       'WORKFLOW_ADD_TO_CART', \{{ namespace }}\AddToCartWorkflow::class
+ *   );
+ *
+ * This is a starting point — replace the demo logic with your real cart service.
+ */
+class AddToCartWorkflow implements WorkflowHandlerInterface
+{
+    public function handle(WorkflowContext $context): WorkflowResponse
+    {
+        $productId = $context->get('productId');
+        $title = $context->get('title', 'Product Item');
+        $price = (float)$context->get('price', 0.0);
+        $imageUrl = $context->get('imageUrl', '');
+        $needsCustomization = (bool)$context->get('needsCustomization', false);
+
+        if ($needsCustomization) {
+            return WorkflowResponse::make()
+                ->openSheet('product_customizer', [
+                    'productId' => (string)$productId,
+                    'title' => $title,
+                    'price' => (string)$price,
+                    'imageUrl' => $imageUrl
+                ]);
+        }
+
+        return WorkflowResponse::make()
+            ->mutateCart([
+                'action' => 'add',
+                'productId' => (string)$productId,
+                'title' => $title,
+                'price' => $price,
+                'imageUrl' => $imageUrl,
+                'quantity' => 1
+            ])
+            ->toast("Added {$title} to your cart!", 'success')
+            ->haptic('success');
+    }
+}

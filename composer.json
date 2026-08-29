@@ -1,0 +1,53 @@
+{
+    "name": "hashtagcms/workflows",
+    "description": "Server-Driven Workflow & Action Orchestration Engine for HashtagCMS",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "HashtagCMS",
+            "email": "hashtagcms.org@gmail.com"
+        }
+    ],
+    "require": {
+        "php": "^8.3",
+        "illuminate/support": "^10.0 || ^11.0 || ^12.0 || ^13.0",
+        "hashtagcms/hashtagcms": "^2.0.6 || ^3.0"
+    },
+    "require-dev": {
+        "orchestra/testbench": "^8.0 || ^9.0 || ^10.0 || ^11.0",
+        "phpunit/phpunit": "^10.5 || ^11.0 || ^12.0",
+        "mockery/mockery": "^1.6"
+    },
+    "autoload": {
+        "psr-4": {
+            "HashtagCms\\Workflows\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "HashtagCms\\Workflows\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "HashtagCms\\Workflows\\HashtagCmsWorkflowsServiceProvider"
+            ],
+            "aliases": {
+                "Workflows": "HashtagCms\\Workflows\\Facades\\Workflows"
+            }
+        }
+    },
+    "scripts": {
+        "test": "vendor/bin/phpunit",
+        "test:coverage": "vendor/bin/phpunit --coverage-text"
+    },
+    "config": {
+        "allow-plugins": {
+            "*": true
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}

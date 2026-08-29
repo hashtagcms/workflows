@@ -1,0 +1,11 @@
+/vendor/
+composer.lock
+.phpunit.cache/
+.phpunit.result.cache
+.idea/
+.vscode/
+.DS_Store
+
+# Node / webpack build tooling
+node_modules/
+npm-debug.log*

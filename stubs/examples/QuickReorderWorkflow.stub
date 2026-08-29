@@ -1,0 +1,38 @@
+<?php
+
+namespace {{ namespace }};
+
+use HashtagCms\Workflows\Contracts\WorkflowHandlerInterface;
+use HashtagCms\Workflows\Engine\WorkflowContext;
+use HashtagCms\Workflows\Engine\WorkflowResponse;
+
+/**
+ * Example: rebuild the cart from a previous order.
+ *
+ * Register with alias WORKFLOW_QUICK_REORDER:
+ *   \HashtagCms\Workflows\Facades\Workflows::register(
+ *       'WORKFLOW_QUICK_REORDER', \{{ namespace }}\QuickReorderWorkflow::class
+ *   );
+ *
+ * Replace the demo values with a lookup of the customer's real past order.
+ */
+class QuickReorderWorkflow implements WorkflowHandlerInterface
+{
+    public function handle(WorkflowContext $context): WorkflowResponse
+    {
+        $orderId = $context->get('orderId', 'rec-1');
+        $title = $context->get('title', 'Previous Item');
+        $price = (float)$context->get('price', 0.0);
+
+        return WorkflowResponse::make()
+            ->mutateCart([
+                'action' => 'add',
+                'productId' => (string)$orderId,
+                'title' => $title,
+                'price' => $price,
+                'quantity' => 1
+            ])
+            ->toast("Reordered {$title}! Cart ready for checkout.", 'success')
+            ->haptic('success');
+    }
+}

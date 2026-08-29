@@ -1,0 +1,31 @@
+<?php
+
+namespace {{ namespace }};
+
+use HashtagCms\Workflows\Contracts\WorkflowHandlerInterface;
+use HashtagCms\Workflows\Engine\WorkflowContext;
+use HashtagCms\Workflows\Engine\WorkflowResponse;
+
+/**
+ * Example: record a satisfaction rating and grant loyalty points.
+ *
+ * Register with alias WORKFLOW_SUBMIT_FEEDBACK:
+ *   \HashtagCms\Workflows\Facades\Workflows::register(
+ *       'WORKFLOW_SUBMIT_FEEDBACK', \{{ namespace }}\SubmitFeedbackWorkflow::class
+ *   );
+ *
+ * Persist the rating in your own store; the points rule below is a demo.
+ */
+class SubmitFeedbackWorkflow implements WorkflowHandlerInterface
+{
+    public function handle(WorkflowContext $context): WorkflowResponse
+    {
+        $rating = (int)$context->get('rating', 5);
+        $pointsEarned = $rating >= 4 ? 50 : 20;
+
+        return WorkflowResponse::make()
+            ->toast("Thank you! You earned +{$pointsEarned} reward points.", 'success')
+            ->haptic('success')
+            ->withData(['pointsAdded' => $pointsEarned]);
+    }
+}

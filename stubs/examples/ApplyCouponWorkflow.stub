@@ -1,0 +1,53 @@
+<?php
+
+namespace {{ namespace }};
+
+use HashtagCms\Workflows\Contracts\WorkflowHandlerInterface;
+use HashtagCms\Workflows\Engine\WorkflowContext;
+use HashtagCms\Workflows\Engine\WorkflowResponse;
+
+/**
+ * Example: validate a coupon code and return cart-mutation directives.
+ *
+ * Register with alias WORKFLOW_APPLY_COUPON:
+ *   \HashtagCms\Workflows\Facades\Workflows::register(
+ *       'WORKFLOW_APPLY_COUPON', \{{ namespace }}\ApplyCouponWorkflow::class
+ *   );
+ *
+ * The coupon table below is a demo — replace it with a lookup against your own
+ * promotions source.
+ */
+class ApplyCouponWorkflow implements WorkflowHandlerInterface
+{
+    public function handle(WorkflowContext $context): WorkflowResponse
+    {
+        $code = strtoupper(trim($context->get('code', '')));
+
+        // Demo coupons — replace with your real promotions lookup.
+        $validCoupons = [
+            'DOM50' => ['discountPercent' => 50, 'maxDiscount' => 100, 'label' => '50% OFF (up to 100)'],
+            'OFFER80' => ['discountPercent' => 40, 'maxDiscount' => 80, 'label' => '80 Instant Discount'],
+        ];
+
+        if (empty($code) || !isset($validCoupons[$code])) {
+            return WorkflowResponse::make()
+                ->setSuccess(false, "Coupon '{$code}' is invalid or expired.")
+                ->toast("Invalid or expired coupon code", 'error')
+                ->haptic('error');
+        }
+
+        $coupon = $validCoupons[$code];
+
+        return WorkflowResponse::make()
+            ->mutateCart([
+                'action' => 'apply_coupon',
+                'couponCode' => $code,
+                'discountPercent' => $coupon['discountPercent'] ?? 0,
+                'maxDiscount' => $coupon['maxDiscount'] ?? 0,
+                'label' => $coupon['label']
+            ])
+            ->toast("Coupon '{$code}' applied! {$coupon['label']}", 'success')
+            ->haptic('success')
+            ->withData(['coupon' => $coupon]);
+    }
+}
