@@ -2,6 +2,7 @@
     "name": "hashtagcms/workflows",
     "description": "Server-Driven Workflow & Action Orchestration Engine for HashtagCMS",
     "type": "library",
+    "version": "1.0.0",
     "license": "MIT",
     "authors": [
         {

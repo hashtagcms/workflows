@@ -3,6 +3,7 @@
 namespace HashtagCms\Workflows\Engine\TargetAdapters;
 
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use HashtagCms\Workflows\Engine\VariableInterpolator;
 
 class HttpTargetAdapter implements TargetAdapterInterface
@@ -23,6 +24,7 @@ class HttpTargetAdapter implements TargetAdapterInterface
         }
 
         $url = VariableInterpolator::interpolate($rawUrl, $context);
+        $this->warnOnSelfCall($url);
         $method = strtoupper($httpConfig['method'] ?? 'POST');
         $headers = VariableInterpolator::interpolate($httpConfig['headers'] ?? [], $context);
         $queryParams = VariableInterpolator::interpolate($httpConfig['query'] ?? [], $context);
@@ -80,6 +82,25 @@ class HttpTargetAdapter implements TargetAdapterInterface
                 'headers' => [],
                 'error' => 'HTTP Execution Error: ' . $e->getMessage()
             ];
+        }
+    }
+
+    /**
+     * Warn when a workflow's HTTP target points back at this app's own host.
+     * Such self-calls block until they time out under a single-worker dev server
+     * (`php artisan serve`); a multi-worker runtime (Octane / php-fpm) is required.
+     * We only log — self-calls are legitimate on multi-worker setups.
+     */
+    private function warnOnSelfCall(string $url): void
+    {
+        $targetHost = parse_url($url, PHP_URL_HOST);
+        $appHost = parse_url((string) config('app.url'), PHP_URL_HOST);
+        if ($targetHost && $appHost && strcasecmp($targetHost, $appHost) === 0) {
+            Log::warning(
+                "[workflows] HTTP target host '{$targetHost}' is this app itself. Under a " .
+                'single-worker dev server (php artisan serve) this self-call blocks until it ' .
+                'times out — use a multi-worker runtime (Octane / php-fpm) for such workflows.'
+            );
         }
     }
 }

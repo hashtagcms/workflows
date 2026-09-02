@@ -10,4 +10,5 @@ Route::middleware(['api'])->prefix($prefix . '/public/workflows/v1')->group(func
     Route::post('/execute', [WorkflowExecutionController::class, 'execute']);
     Route::get('/health', [WorkflowExecutionController::class, 'health']);
     Route::get('/directives', [WorkflowExecutionController::class, 'directives']);
+    Route::get('/catalog', [WorkflowExecutionController::class, 'catalog']);
 });

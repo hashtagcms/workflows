@@ -99,4 +99,21 @@ class WorkflowExecutionController extends Controller
             'directives' => $negotiator->catalog($siteId, $platform, $appVersion),
         ]);
     }
+
+    /**
+     * The workflow contract for a site: each workflow's alias, expected payload
+     * keys (from validation rules), and the directive types it can emit. Lets a
+     * client validate ExecuteWorkflow calls and detect alias/payload drift.
+     * See {@see \HashtagCms\Workflows\Support\WorkflowCatalog}.
+     */
+    public function catalog(Request $request)
+    {
+        $siteId = (int) $request->query('site_id', 1);
+
+        return response()->json([
+            'success' => true,
+            'site_id' => $siteId,
+            'workflows' => \HashtagCms\Workflows\Support\WorkflowCatalog::forSite($siteId),
+        ]);
+    }
 }

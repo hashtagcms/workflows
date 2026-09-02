@@ -77,7 +77,7 @@ class Workflows
         $hasConfig = !empty($workflow->config);
         if ($hasConfig) {
             $configData = is_string($workflow->config) ? json_decode($workflow->config, true) : $workflow->config;
-            if (!empty($configData) && (isset($configData['target']) || isset($configData['directives']) || isset($configData['validation']) || isset($configData['rules']) || isset($configData['steps']))) {
+            if (!empty($configData) && (isset($configData['target']) || isset($configData['directives']) || isset($configData['on_success']) || isset($configData['on_failure']) || isset($configData['validation']) || isset($configData['rules']) || isset($configData['steps']))) {
                 $workflow->config = $configData;
                 $engine = app()->make(GenericWorkflowEngine::class);
                 $response = $engine->execute($context);
