@@ -38,6 +38,7 @@ class HashtagCmsWorkflowsServiceProvider extends ServiceProvider
             $this->commands([
                 \HashtagCms\Workflows\Console\MakeWorkflowCommand::class,
                 \HashtagCms\Workflows\Console\PublishExamplesCommand::class,
+                \HashtagCms\Workflows\Console\CheckJavaParityCommand::class,
             ]);
 
             $this->publishes([

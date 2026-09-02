@@ -6,6 +6,12 @@ adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- **`workflows:check-java-parity` command** — reports when the Java port
+  (github.com/hashtagcms/workflows-java) has fallen behind this reference
+  implementation's directive manifest. Compares the manifest against the Java
+  repo's checked-in fixture and lists directives added/removed/changed here that
+  Java hasn't picked up (non-zero exit on drift, for CI); `--write` updates the
+  fixture from PHP in one step.
 - **Declarative workflows can return `data`.** A `data` object under `on_success`
   / `on_failure` (or top-level) is interpolated and returned in the response's
   `data` field — the natural way to surface a target's response, e.g.
