@@ -45,6 +45,18 @@ class WorkflowExecutionControllerTest extends TestCase
             ->assertJsonFragment(['message' => 'Added to cart']);
     }
 
+    public function test_unauthorized_response_maps_to_http_401(): void
+    {
+        $this->fake->response = WorkflowResponse::unauthorized('Authentication required.');
+
+        $this->postJson($this->base . '/execute', ['workflow' => 'SECURE', 'payload' => []])
+            ->assertStatus(401)
+            ->assertJson([
+                'success' => false,
+                'message' => 'Authentication required.',
+            ]);
+    }
+
     public function test_exception_message_is_masked_when_debug_off(): void
     {
         config(['app.debug' => false, 'hashtagcms-workflows.expose_error_details' => null]);

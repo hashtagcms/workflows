@@ -76,6 +76,8 @@ class GenericWorkflowEngine
             'site' => ['id' => $context->getSiteId()],
             'platform' => $context->getPlatform(),
             'user' => $user ? (method_exists($user, 'toArray') ? $user->toArray() : (array)$user) : [],
+            'claims' => $context->getClaims(),
+            'identity' => $this->identityContext($context),
             'config' => $config,
             'workflow' => [
                 'id' => $workflow->id ?? 0,
@@ -195,5 +197,27 @@ class GenericWorkflowEngine
         }
 
         return $response;
+    }
+
+    /**
+     * The `{{ identity.* }}` interpolation namespace: the resolved caller's
+     * canonical fields plus the opt-in raw passthrough. Curated attributes stay
+     * under `{{ claims.* }}`; `{{ identity.raw.* }}` is the provider's raw
+     * validator response, populated only when the provider maps `identity.raw`.
+     */
+    private function identityContext(WorkflowContext $context): array
+    {
+        $identity = $context->getIdentity();
+
+        if ($identity === null) {
+            return ['user_id' => $context->getUserId(), 'external_user_id' => null, 'provider' => null, 'raw' => []];
+        }
+
+        return [
+            'user_id' => $identity->id,
+            'external_user_id' => $identity->externalUserId(),
+            'provider' => $identity->provider,
+            'raw' => $identity->raw,
+        ];
     }
 }

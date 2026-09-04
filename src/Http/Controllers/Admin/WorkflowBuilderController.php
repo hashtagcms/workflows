@@ -52,6 +52,7 @@ class WorkflowBuilderController extends AdminWorkflowBaseController
             'handler' => 'nullable|string|max:255',
             'config' => 'nullable',
             'auth_required' => 'nullable|boolean',
+            'sso_provider_alias' => 'nullable|string|max:255',
             'publish_status' => 'nullable|boolean',
         ]);
 
@@ -83,6 +84,8 @@ class WorkflowBuilderController extends AdminWorkflowBaseController
             'handler' => !empty($data['handler']) ? trim($data['handler']) : null,
             'config' => $configData,
             'auth_required' => isset($data['auth_required']) ? (int) $data['auth_required'] : 0,
+            // Optional pin to a specific SSO provider; empty means "use the site default".
+            'sso_provider_alias' => !empty($data['sso_provider_alias']) ? trim($data['sso_provider_alias']) : null,
             'publish_status' => isset($data['publish_status']) ? (int) $data['publish_status'] : 1,
             'updated_at' => htcms_get_current_date(),
         ];

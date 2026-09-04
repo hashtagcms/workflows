@@ -4,6 +4,10 @@ namespace HashtagCms\Workflows;
 
 use Illuminate\Support\ServiceProvider;
 use HashtagCms\Workflows\Workflows;
+use HashtagCms\Workflows\Contracts\WorkflowIdentityResolver;
+use HashtagCms\Workflows\Identity\AuthIdentityResolver;
+use HashtagCms\Workflows\Identity\SsoIdentityResolver;
+use HashtagCms\Workflows\Identity\Sso\SsoProviderRepository;
 
 class HashtagCmsWorkflowsServiceProvider extends ServiceProvider
 {
@@ -18,6 +22,21 @@ class HashtagCmsWorkflowsServiceProvider extends ServiceProvider
 
         $this->app->singleton('hashtagcms.workflows', function ($app) {
             return new Workflows();
+        });
+
+        // Identity resolver selection. When the SSO provider module is active
+        // (its table exists and a provider is enabled), resolve identity through
+        // the SSO-backed resolver; otherwise use the local Laravel guard exactly
+        // as before. The check is guarded and only runs when the resolver is
+        // built (once per execution), so installs without SSO pay nothing and
+        // never hit the DB for it. Apps can still rebind this contract to their
+        // own implementation to override both.
+        $this->app->bind(WorkflowIdentityResolver::class, function ($app) {
+            if ($app->make(SsoProviderRepository::class)->isModuleActive()) {
+                return $app->make(SsoIdentityResolver::class);
+            }
+
+            return $app->make(AuthIdentityResolver::class);
         });
     }
 

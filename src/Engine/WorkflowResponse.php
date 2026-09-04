@@ -9,9 +9,40 @@ class WorkflowResponse
     private ?string $message = null;
     private array $data = [];
 
+    /**
+     * Transport-level HTTP status hint (e.g. 401 for an unauthorized run). Null
+     * means "let the caller default it" (200 for the API controller). Not part
+     * of the JSON body — read separately via getStatusCode().
+     */
+    private ?int $statusCode = null;
+
     public static function make(): self
     {
         return new self();
+    }
+
+    /**
+     * An authentication failure: the credential was rejected, or the workflow is
+     * flagged `auth_required` and no identity was resolved. Carries a 401 hint
+     * and an error toast so SDUI clients can surface it.
+     */
+    public static function unauthorized(string $message = 'Authentication required.'): self
+    {
+        return (new self())
+            ->setSuccess(false, $message)
+            ->setStatusCode(401)
+            ->toast($message, 'error');
+    }
+
+    public function setStatusCode(int $code): self
+    {
+        $this->statusCode = $code;
+        return $this;
+    }
+
+    public function getStatusCode(): ?int
+    {
+        return $this->statusCode;
     }
 
     public function toast(string $message, string $level = 'success'): self

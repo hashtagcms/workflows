@@ -21,6 +21,7 @@ Welcome to the official technical documentation for **`hashtagcms/workflows`**, 
 | [11-example-otp-verification-workflow.md](11-example-otp-verification-workflow.md) | **Example: Phone OTP & Auth** | Rate-limited OTP verification, Sanctum token creation, and auth state transition directives. |
 | [12-directive-capability-negotiation.md](12-directive-capability-negotiation.md) | **Directive Capability Negotiation** | The `workflow_directives` manifest, per-client capability resolution, fallback/degradation, and telemetry. |
 | [13-interactive-workflow-manager.md](13-interactive-workflow-manager.md) | **Interactive Workflow Manager** | The Vue-based visual builder — panels, live preview, cURL, the JSON escape hatch, and how it's built. |
+| [14-sso-and-external-login.md](14-sso-and-external-login.md) | **SSO & External Login** | Resolving workflow identity when login is handled by another service — the identity resolver seam, the data-driven SSO provider module, and the `opaque` / `jwt` drivers. |
 
 ---
 

@@ -72,7 +72,7 @@ return new class extends Migration
                 $table->string('category')->nullable();      // 'cart' | 'navigation' | 'feedback'
                 $table->text('description')->nullable();
                 $table->json('platforms')->nullable();       // { "web":"1.0", "android":"2.1", "ios":"2.1" }
-                $table->json('schema')->nullable();          // payload field spec (validation + Playground)
+                $table->json('schema')->nullable();          // payload field spec (used for validation)
                 $table->string('fallback')->nullable();      // another directive `type` to substitute
                 $table->boolean('is_core')->default(false);  // package-shipped vs app-registered
                 $table->boolean('publish_status')->default(true);
@@ -99,9 +99,9 @@ return new class extends Migration
 |---|---|
 | `site_id` | Multisite scope, default `1`, indexed — identical to `workflows`. A directive belongs to a site; resolution falls back to the master site (see below), so the common case is "define once on the master site, override per site only when needed." |
 | `type` | The canonical directive name and natural key — `mutate_cart`, `toast`, `haptic`. Unique **per site** (`site_id` + `type`), so seeders upsert by it. |
-| `label` / `category` / `description` | Admin & Playground ergonomics — render a grouped, searchable directive picker instead of a free-text field. |
+| `label` / `category` / `description` | Admin editor ergonomics — render a grouped, searchable directive picker instead of a free-text field. |
 | **`platforms`** | The compatibility matrix in one column: a map of `platform → minimum app_version that supports this directive`. `null`/empty = supported on all platforms, any version. |
-| **`schema`** | Field spec for the directive's payload. Powers Playground validation, optional server-side validation, and generated client typings. |
+| **`schema`** | Field spec for the directive's payload. Powers admin-editor validation, optional server-side validation, and generated client typings. |
 | **`fallback`** | The `type` of another directive to substitute when a client can't render this one (`open_ar_view → navigate`). Self-referential by `type`; resolved as a chain (see below). |
 | `is_core` | Distinguishes package-shipped directives from ones a host app registers, so `db:seed` re-runs upsert only core rows and never clobber app-added ones. |
 | `publish_status` / `deleted_at` | Enable/disable or retire a directive without losing history — same lifecycle as `workflows`. |
@@ -248,7 +248,7 @@ is the richer, preferred form.
 
 ## The manifest API
 
-Expose the resolved manifest so clients and the Playground can self-configure,
+Expose the resolved manifest so clients can self-configure,
 sitting alongside the existing `/execute` and `/health` routes:
 
 ```
@@ -281,7 +281,7 @@ Response:
 
 ## Author-time validation
 
-Because the manifest exists, the **Playground and admin editor can validate a
+Because the manifest exists, the **admin editor can validate a
 workflow at save time** rather than at crash time:
 
 - Flag any directive a workflow emits that isn't in the manifest ("unknown
@@ -348,7 +348,7 @@ by the server, degraded by the client, and measured in the logs.
 | **1 — Fail safely** | Client rule: ignore unknown directives. Log unknown/echoed types to `workflow_logs`. | No more crashes; first visibility. No schema change. |
 | **2 — The manifest** | `workflow_directives` table + `WorkflowDirective` model + `WorkflowDirectivesSeeder` (core rows on the master site) + `GET /directives`. | Single source of truth; clients can self-configure. |
 | **3 — Negotiate** | Resolution + filter/fallback/drop pass in `GenericWorkflowEngine`; downgrade/drop telemetry. | Server adapts output per client; gaps measured. |
-| **4 — Author guardrails** | Playground/admin validation against the manifest. | Mismatches caught before release. |
+| **4 — Author guardrails** | Admin-editor validation against the manifest. | Mismatches caught before release. |
 
 Each phase is additive and independently shippable; nothing in phase 1–2 breaks
 the current `/execute` contract.

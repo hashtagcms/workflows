@@ -6,9 +6,11 @@ use HashtagCms\Workflows\Models\Workflow;
 use HashtagCms\Workflows\Models\WorkflowLog;
 use HashtagCms\Workflows\Engine\WorkflowContext;
 use HashtagCms\Workflows\Engine\WorkflowResponse;
+use HashtagCms\Workflows\Engine\WorkflowIdentity;
 use HashtagCms\Workflows\Engine\GenericWorkflowEngine;
 use HashtagCms\Workflows\Engine\DirectiveNegotiator;
 use HashtagCms\Workflows\Contracts\WorkflowHandlerInterface;
+use HashtagCms\Workflows\Contracts\WorkflowIdentityResolver;
 
 class Workflows
 {
@@ -40,7 +42,8 @@ class Workflows
         int $siteId = 1,
         ?string $platform = 'android',
         ?string $appVersion = null,
-        array $capabilities = []
+        array $capabilities = [],
+        mixed $identity = null
     ): WorkflowResponse {
         $startTime = microtime(true);
         $masterSiteId = (int) config('hashtagcms-workflows.master_site_id', 1);
@@ -63,14 +66,43 @@ class Workflows
             ]);
         }
 
+        // Resolve who is executing this workflow. An explicit $identity (passed
+        // by a caller that already knows the user) wins; otherwise the bound
+        // WorkflowIdentityResolver decides — by default the local Laravel guard.
+        // Either way the engine no longer assumes Laravel login is in use.
+        $resolvedIdentity = $identity !== null
+            ? WorkflowIdentity::from($identity)
+            : app(WorkflowIdentityResolver::class)->resolve(request(), $workflow->sso_provider_alias ?? null);
+
+        // Enforce authentication before running anything. A rejected credential
+        // (a bad token under an on_failure=reject provider) is always a 401; a
+        // workflow flagged auth_required needs *some* resolved identity. Anonymous
+        // callers of a non-auth_required workflow pass straight through.
+        $authError = null;
+        if ($resolvedIdentity->failed) {
+            $authError = 'Invalid or expired credentials.';
+        } elseif (($workflow->auth_required ?? false) && !$resolvedIdentity->isAuthenticated()) {
+            $authError = 'Authentication required.';
+        }
+
+        if ($authError !== null) {
+            $response = WorkflowResponse::unauthorized($authError);
+            $executionMs = (int)((microtime(true) - $startTime) * 1000);
+            $this->logRun($alias, $siteId, $resolvedIdentity, $payload, $response, $executionMs, $platform, $appVersion, ['downgraded' => [], 'dropped' => []]);
+            return $response;
+        }
+
         $context = new WorkflowContext(
             workflow: $workflow,
             payload: $payload,
             siteId: $siteId,
+            userId: $resolvedIdentity->localUserId(),
             platform: $platform,
-            user: auth()->user(),
+            user: $resolvedIdentity->user,
             appVersion: $appVersion,
-            capabilities: $capabilities
+            capabilities: $capabilities,
+            claims: $resolvedIdentity->claims,
+            identity: $resolvedIdentity
         );
 
         // If workflow has declarative configuration (validation, rules, target, on_success, directives, steps)
@@ -123,22 +155,43 @@ class Workflows
 
         $executionMs = (int)((microtime(true) - $startTime) * 1000);
 
+        $this->logRun($alias, $siteId, $resolvedIdentity, $payload, $response, $executionMs, $platform, $appVersion, $negotiation);
+
+        return $response;
+    }
+
+    /**
+     * Persist an execution (or a blocked one) to workflow_logs. Fail-safe: any
+     * logging error is swallowed so it never masks the workflow's own result.
+     */
+    private function logRun(
+        string $alias,
+        int $siteId,
+        WorkflowIdentity $identity,
+        array $payload,
+        WorkflowResponse $response,
+        int $executionMs,
+        ?string $platform,
+        ?string $appVersion,
+        array $negotiation
+    ): void {
         try {
+            $result = $response->toArray();
             WorkflowLog::create([
                 'workflow_alias' => $alias,
                 'site_id' => $siteId,
-                'user_id' => auth()->id(),
+                'user_id' => $identity->localUserId(),
+                'external_user_id' => $identity->externalUserId(),
+                'sso_provider_alias' => $identity->provider,
                 'payload' => $payload,
-                'response_directives' => $response->toArray()['directives'] ?? [],
-                'is_success' => $response->toArray()['success'] ?? true,
-                'error_message' => $response->toArray()['success'] ? null : ($response->toArray()['message'] ?? null),
+                'response_directives' => $result['directives'] ?? [],
+                'is_success' => $result['success'] ?? true,
+                'error_message' => ($result['success'] ?? true) ? null : ($result['message'] ?? null),
                 'execution_time_ms' => $executionMs,
                 'client_platform' => $platform,
                 'client_app_version' => $appVersion,
                 'negotiation' => (!empty($negotiation['downgraded']) || !empty($negotiation['dropped'])) ? $negotiation : null,
             ]);
         } catch (\Throwable $e) {}
-
-        return $response;
     }
 }

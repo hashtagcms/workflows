@@ -40,7 +40,9 @@ class WorkflowExecutionController extends Controller
                 capabilities: $capabilities
             );
 
-            return response()->json($response->toArray());
+            // A workflow may signal a transport status (e.g. 401 when auth is
+            // required or a credential was rejected); default to 200 otherwise.
+            return response()->json($response->toArray(), $response->getStatusCode() ?? 200);
 
         } catch (\Throwable $e) {
             report($e);

@@ -108,7 +108,7 @@
                     <div class="flex items-center justify-between">
                         <div>
                             {!! FormHelper::label('schema', 'Payload Schema (JSON)', array('class' => 'text-sm font-semibold text-slate-700 block')) !!}
-                            <p class="text-[11px] text-slate-400">Field spec for this directive's payload — used by validation and the Playground.</p>
+                            <p class="text-[11px] text-slate-400">Field spec for this directive's payload — used by validation and the directive picker.</p>
                         </div>
                         <button type="button" onclick="loadSchemaSample()" class="px-2.5 py-1 text-[11px] bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-medium">Sample</button>
                     </div>

@@ -6,6 +6,81 @@ adheres to [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- **SSO / external-login provider module (data-driven).** A new admin module
+  (**Workflows → SSO Providers**, `admin/workflows/sso`) manages per-site
+  providers that verify a client credential and resolve it to a workflow
+  identity — no code required. Backed by the `workflow_sso_providers` table
+  (site + master-site fallback, `alias` unique **per site**, `driver`, `enabled`,
+  `on_failure`, `cache_ttl`, and a `config` JSON) and the `SsoIdentityResolver`:
+  - **`opaque` driver** — introspects the token against the login service (e.g.
+    `https://login.example.com/sso/authenticate`) by reusing the `HttpTargetAdapter` +
+    `VariableInterpolator` request/response shape: a `config.verify` block is the
+    request formatter (`{{request.bearer_token}}`), a `config.identity` block maps
+    the response (`{{response.body.*}}`) to `{ user_id, claims }`. Verified tokens
+    are cached per token-hash for `cache_ttl` seconds; failures are never cached.
+  - **Configurable credential source** — the token is read from
+    `Authorization: Bearer` by default, but a provider may point at any header via
+    a `credential` block (e.g. `{ "header": "sessiontoken", "strip_prefix": "Bearer " }`),
+    for APIs that don't use `Authorization`. When set it is authoritative (no
+    fallback); incoming headers can also be forwarded to the validate endpoint via
+    `{{request.headers.*}}`.
+  - **`jwt` driver** — verifies the token signature locally against the provider's
+    JWKS (`{{token.*}}` mapping), no per-request call. Requires the optional
+    `firebase/php-jwt` package (composer `suggest`); a `jwt` provider without it
+    raises a clear, actionable error. The `opaque` driver needs nothing extra.
+  - **`on_failure` policy** — `reject` surfaces a failed identity (for the caller
+    to turn into a 401), `anonymous` runs the workflow unauthenticated. When no
+    provider is configured for a site, resolution falls back to the local guard,
+    so nothing regresses.
+  - **Enforcement** — `Workflows::execute()` now blocks a run (returning a 401 the
+    execution API maps to HTTP 401, logged as unsuccessful) when the credential
+    was rejected, or when a workflow's existing `auth_required` flag is set and no
+    identity resolved. The SSO resolver is swapped in over the local guard
+    automatically, only when the provider module is active (table present + a
+    provider enabled) — so non-SSO installs pay nothing.
+  - **Per-workflow provider pin** — a workflow may name a specific provider via a
+    new optional `workflows.sso_provider_alias` column (migration `000010`);
+    otherwise identity is resolved by the site's default provider. The site
+    default is now deterministic (site-over-master, then lowest id), and a stale
+    pin degrades gracefully to that default. The Workflow Manager gains an
+    *Identity provider (SSO)* picker (concrete providers only — an unpinned
+    workflow defaults to the site's default provider, shown selected) with a live
+    indicator that states which provider a workflow will use, or that SSO is
+    ignored. A workflow can also opt out of SSO entirely by choosing **None**
+    (stored as `@none` /
+    `SsoIdentityResolver::PROVIDER_NONE`) — identity is then resolved by the local
+    guard even while a provider is enabled, for providers created ahead of use.
+    `WorkflowIdentityResolver::resolve()` gains an optional `$ssoProviderAlias`
+    argument (ignored by the local resolver).
+- **Pluggable workflow identity (step 1 of SSO support).** The engine no longer
+  hard-couples the executing user to Laravel's login. `Workflows::execute()` now
+  resolves identity through a `WorkflowIdentityResolver` contract instead of
+  calling `auth()` directly, and accepts an explicit `identity:` argument that
+  overrides resolution (a scalar id, a user model, or a `WorkflowIdentity`). The
+  default binding (`AuthIdentityResolver`) wraps `auth()`, so apps using the
+  local guard are unaffected; apps fronted by an external login service rebind
+  the contract. A normalized `WorkflowIdentity` value object routes integer ids
+  to local users and string ids to external subjects, and never throws when no
+  identity is present (workflows still run anonymously). Foundation for the
+  forthcoming data-driven SSO provider module.
+  - Providers may also map an **opt-in raw passthrough** — `identity.raw`
+    (e.g. `"raw": "{{ response.body.data }}"`) — exposed to workflows as
+    `{{ identity.raw.* }}` for when curating every field isn't wanted. Curated
+    `claims` stays the default (it decouples workflows from the provider's
+    response shape); `raw` deliberately reintroduces that coupling. The
+    `{{ identity.* }}` namespace also exposes `user_id`, `external_user_id`, and
+    `provider`.
+  - `WorkflowContext` now carries the resolved identity and its claims:
+    `getExternalUserId()` reaches a non-local (SSO/UUID) subject, `getIdentity()`
+    returns the full `WorkflowIdentity`, and `getClaims()` / `claim()` expose
+    normalized claims (roles, tenant, …). `getUserId()` still returns the local
+    integer id only. Declarative workflows can interpolate `{{ claims.* }}`
+    (e.g. `{{ claims.roles }}`) alongside the existing `{{ user.* }}`. All
+    additive — existing handlers and contexts are unaffected.
+  - `workflow_logs` gains `external_user_id` (indexed) and `sso_provider_alias`
+    (new non-destructive migration). `user_id` still holds the local integer id;
+    an external subject is logged under `external_user_id` with the resolving
+    provider, so audit trails stay complete when login is handled elsewhere.
 - **`workflows:check-java-parity` command** — reports when the Java port
   (github.com/hashtagcms/workflows-java) has fallen behind this reference
   implementation's directive manifest. Compares the manifest against the Java
@@ -66,14 +141,10 @@ adheres to [Semantic Versioning](https://semver.org/).
   - `negotiation.enabled` config flag (env `HASHTAGCMS_WORKFLOWS_NEGOTIATION`).
 - **Complete install with one command.** `php artisan migrate` now provisions the
   whole package end-to-end: the admin modules (Workflows, Manager, Logs,
-  Playground, Directives), the directive manifest, and the bundled example
+  Directives), the directive manifest, and the bundled example
   workflows — no separate `db:seed` step. Opt out of the demo workflows with
   `install.seed_examples=false` (env `HASHTAGCMS_WORKFLOWS_SEED_EXAMPLES`).
 
-- **Workflow Playground** — a new admin page (`admin/workflows/playground`, under
-  the *Workflows* menu) that lists every published workflow, lets you edit a
-  payload and **Run** it against the execute endpoint, and shows both the
-  rendered directives and the raw request/response JSON.
 - Bundled example workflow seeders demonstrating every structural pattern, all
   runnable and upserted by alias:
   - `LoadPhotosWorkflowSeeder` / `LoadPhotosPaginatedWorkflowSeeder` — HTTP GET and
@@ -112,9 +183,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   copy of core's dynamic reflection dispatcher. The package owns its own routing
   and references its controllers directly — the standard pattern for HashtagCMS
   packages (as in hashtagcms-extended). No core changes are required.
-- All package admin views now resolve through core's view loader: manage and
-  playground go through the `cms_modules`-driven `getViewNames()` resolution, and
-  `htcms_workflows_view()` is now a thin wrapper over core's `htcms_admin_view()`.
+- All package admin views now resolve through core's view loader via the
+  `cms_modules`-driven `getViewNames()` resolution, and `htcms_workflows_view()`
+  is now a thin wrapper over core's `htcms_admin_view()`.
 - `cms_modules` menu rows are seeded by stable `controller_name` slugs with
   dynamically allocated auto-increment ids (no hard-coded module ids), so the
   package no longer risks id collisions with core or other packages.

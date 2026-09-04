@@ -48,6 +48,7 @@ Full technical documentation lives in [`docs/`](docs/README.md):
 | [Audit Logging & Analytics](docs/07-audit-logging-and-analytics.md) | Execution monitoring, benchmarks, and log pruning. |
 | [Directive Capability Negotiation](docs/12-directive-capability-negotiation.md) | Manifest of supported directives, per-client resolution, fallbacks, and telemetry. |
 | [Interactive Workflow Manager](docs/13-interactive-workflow-manager.md) | The Vue-based visual builder — panels, live preview, cURL, JSON escape hatch, and how it's built. |
+| [SSO & External Login](docs/14-sso-and-external-login.md) | Resolving workflow identity when login is handled by another service — the resolver seam and the data-driven SSO provider module (`opaque` / `jwt`). |
 
 End-to-end examples: [Apply Promo](docs/08-example-apply-promo-workflow.md) · [Add to Cart](docs/09-example-add-to-cart-workflow.md) · [Appointment Booking](docs/10-example-appointment-booking-workflow.md) · [OTP Verification](docs/11-example-otp-verification-workflow.md).
 
@@ -103,7 +104,7 @@ php artisan migrate
 ```
 
 That single `migrate` provisions the whole package: the admin modules
-(**Workflows** → Manager, Directives, Logs, Playground), the **directive
+(**Workflows** → Manager, Directives, Logs), the **directive
 capability manifest** (72 predefined directives), and the **bundled example
 workflows** — no separate seed step. To install the schema without the
 demo workflows, set `HASHTAGCMS_WORKFLOWS_SEED_EXAMPLES=false` before migrating.
@@ -150,15 +151,6 @@ curl -X POST /api/hashtagcms/public/workflows/v1/execute -H "Content-Type: appli
 
 Seed a single group by pointing `--class` at `LoadPhotosWorkflowSeeder`,
 `LoadPhotosPaginatedWorkflowSeeder`, or `WorkflowStructureExamplesSeeder`.
-
-### Playground
-
-Once installed, the admin panel gains a **Workflow Playground** page
-(`admin/workflows/playground`, under the *Workflows* menu). It lists every
-published workflow, lets you edit a payload and **Run** it against the execute
-endpoint, and shows both the **rendered directives** (toasts, welcome banner,
-photo grid…) and the **raw request/response JSON** — the quickest way to see the
-server-driven model in action after install.
 
 ---
 

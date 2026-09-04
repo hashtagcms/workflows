@@ -10,12 +10,12 @@ HashtagCMS Workflows provides native administration screens within the **Hashtag
 
 ## 1. Accessing Workflows in Admin
 
-Once installed and migrated, you will find the **Workflows** category in the left sidebar menu, with four modules:
+Once installed and migrated, you will find the **Workflows** category in the left sidebar menu, with these modules:
 
 1. **Workflow Manager** (`admin/workflows/builder`) — create and edit workflows with the Vue-based visual builder (with a raw-JSON tab). See [13 - Interactive Workflow Manager](13-interactive-workflow-manager.md).
 2. **Workflow Directives** (`admin/workflows/directives`) — manage the directive capability manifest. See [12 - Directive Capability Negotiation](12-directive-capability-negotiation.md).
 3. **Workflow Logs** (`admin/workflows/logs`) — execution audit trail.
-4. **Workflow Playground** (`admin/workflows/playground`) — run published workflows and watch directives render.
+4. **SSO Providers** (`admin/workflows/sso`) — external-login providers that resolve workflow identity. See [14 - SSO & External Login](14-sso-and-external-login.md).
 
 ---
 
@@ -51,12 +51,11 @@ directive picker in the Interactive Workflow Manager. Full detail in
 
 ---
 
-## 5. Workflow Playground (`workflows/playground`)
+## 5. SSO Providers (`workflows/sso`)
 
-A read-only demo screen that lists every published workflow, lets you edit a
-sample payload and **Run** it against the execute endpoint, and renders both the
-returned directives and the raw request/response JSON — the quickest way to see
-the server-driven model in action after install.
+Manage external-login / SSO providers that verify a client credential and resolve
+it to a workflow identity — no code required. Full detail in
+[14 - SSO & External Login](14-sso-and-external-login.md).
 
 ---
 

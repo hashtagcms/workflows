@@ -28,6 +28,10 @@ use HashtagCms\Workflows\Examples\DemoGreetingHandler;
  *   {{ response.body.* }}   the target's (decoded) response  — only after a target runs
  *   {{ response.status }}   HTTP status of the target
  *   {{ user.* }}            authenticated user (array)
+ *   {{ claims.* }}          normalized identity claims (e.g. claims.email, claims.roles)
+ *                           — set from the resolved identity / SSO provider mapping
+ *   {{ identity.* }}        identity fields: identity.user_id / .external_user_id /
+ *                           .provider, and .raw.* (opt-in raw validator passthrough)
  *   {{ site.id }} {{ platform }}
  *   {{ errors.* }}          validation errors (inside validation.on_error only)
  *   {{ env.KEY }}           environment variable

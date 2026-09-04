@@ -48,16 +48,16 @@ class WorkflowModuleRegistry
                 'edit_view_name' => null,
                 'position' => 63,
             ],
-            'playground' => [
-                'name' => 'Workflow Playground',
-                'controller_name' => 'workflows/playground',
+            'sso' => [
+                'name' => 'SSO Providers',
+                'controller_name' => 'workflows/sso',
                 'parent' => 'group',
-                'icon' => 'fa fa-flask',
-                'description' => 'Run the seeded example workflows and watch directives render',
-                // Core resolves this via the `package` column → hashtagcms-workflows::workflows.playground.index
-                'list_view_name' => 'workflows/playground/index',
-                'edit_view_name' => null,
-                'position' => 64,
+                'icon' => 'fa fa-key',
+                'description' => 'External login / SSO providers used to resolve workflow identity',
+                'list_view_name' => null,
+                // Core prefixes this via the `package` column → hashtagcms-workflows::workflows.sso.addedit
+                'edit_view_name' => 'workflows/sso/addedit',
+                'position' => 65,
             ],
             'builder' => [
                 'name' => 'Workflow Manager',

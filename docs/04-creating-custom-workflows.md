@@ -86,6 +86,14 @@ Organizations can connect client actions to their own backend microservices, ERP
 }
 ```
 
+> **Requiring authentication.** The JSON above is the workflow's `config` column.
+> The workflow *row* also has an `auth_required` boolean: set it to `true` and the
+> engine refuses to run the workflow (returns **401**) unless a valid identity was
+> resolved for the caller — via the local guard, or a token validated by an SSO
+> provider. It does not change the config; it is the on/off switch. See
+> [SSO & External Login](14-sso-and-external-login.md) for exactly which request
+> the engine makes to validate a token.
+
 ### 2. Available Target Adapters
 
 | Target Type | Purpose | Configuration Keys |
@@ -102,6 +110,8 @@ Organizations can connect client actions to their own backend microservices, ERP
 | `{{ payload.key }}` | Client input parameter (e.g. `product_id`, `qty`, `coupon_code`) |
 | `{{ user.id }}` | Currently authenticated user's ID (or null for guests) |
 | `{{ user.email }}` | Authenticated user's email address |
+| `{{ claims.key }}` | A normalized identity **claim** from the resolved caller (e.g. `{{ claims.email }}`, `{{ claims.roles }}`). Claims are the standard (JWT/OAuth) way to carry identity attributes; they are populated from the resolved `WorkflowIdentity` — chiefly by an SSO provider's `identity.claims` mapping when login is handled by another service. Empty when nothing set them. See [SSO & External Login](14-sso-and-external-login.md). |
+| `{{ identity.raw.key }}` | Opt-in **raw** passthrough of the token-validator's response (e.g. `{{ identity.raw.profile.mobile }}`), populated only by a provider's `identity.raw` mapping. Convenient, but couples the workflow to the provider's response shape — prefer curated `claims`. `{{ identity.* }}` also exposes `user_id`, `external_user_id`, `provider`. |
 | `{{ site.id }}` | Current HashtagCMS site context ID |
 | `{{ env.VAR_NAME }}` | Environment variable (e.g. API keys, external URLs) |
 | `{{ response.body.key }}` | Data returned from the target service/HTTP response |

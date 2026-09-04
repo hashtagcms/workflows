@@ -4,7 +4,7 @@ use Illuminate\Support\Facades\Route;
 use HashtagCms\Workflows\Http\Controllers\Admin\WorkflowBuilderController;
 use HashtagCms\Workflows\Http\Controllers\Admin\WorkflowDirectiveController;
 use HashtagCms\Workflows\Http\Controllers\Admin\WorkflowLogController;
-use HashtagCms\Workflows\Http\Controllers\Admin\PlaygroundController;
+use HashtagCms\Workflows\Http\Controllers\Admin\WorkflowSsoProviderController;
 
 /*
 |--------------------------------------------------------------------------
@@ -55,9 +55,6 @@ Route::prefix($routePrefix)
         // Landing → Workflow Manager
         Route::get('home', fn () => redirect($routePrefix . '/builder'))->name('home');
 
-        // Playground — a read-only demo screen to run seeded workflows
-        Route::get('playground', [PlaygroundController::class, 'index'])->name('playground');
-
         // Workflow Manager (Vue-based visual builder — full CRUD)
         Route::controller(WorkflowBuilderController::class)
             ->prefix('builder')
@@ -77,6 +74,20 @@ Route::prefix($routePrefix)
         Route::controller(WorkflowDirectiveController::class)
             ->prefix('directives')
             ->name('directives.')
+            ->group(function () {
+                Route::match(['get', 'post'], '/', 'index')->name('index');
+                Route::match(['get', 'post'], 'search', 'search')->name('search');
+                Route::match(['get', 'post'], 'create', 'create')->name('create');
+                Route::match(['get', 'post'], 'edit/{id?}/{param1?}', 'edit')->name('edit');
+                Route::post('store', 'store')->name('store');
+                Route::match(['get', 'post'], 'publish/{id?}/{status?}', 'publish')->name('publish');
+                Route::match(['get', 'post', 'delete'], 'destroy/{id}', 'destroy')->name('destroy');
+            });
+
+        // SSO Providers (external-login provider CRUD)
+        Route::controller(WorkflowSsoProviderController::class)
+            ->prefix('sso')
+            ->name('sso.')
             ->group(function () {
                 Route::match(['get', 'post'], '/', 'index')->name('index');
                 Route::match(['get', 'post'], 'search', 'search')->name('search');

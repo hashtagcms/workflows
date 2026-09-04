@@ -13,7 +13,7 @@ namespace HashtagCms\Workflows\Support;
  *  - category:    grouping for the admin directive picker
  *  - platforms:   map of platform => minimum app version that can render it.
  *                 null / omitted = supported on every platform, any version.
- *  - schema:      payload field spec (used for validation + the Playground)
+ *  - schema:      payload field spec (used for validation)
  *  - fallback:    the `type` of another directive to substitute when a client
  *                 cannot render this one (resolved as a chain by the negotiator)
  *

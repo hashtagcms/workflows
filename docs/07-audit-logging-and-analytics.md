@@ -48,6 +48,24 @@ an old directive is safe to require, or when a client rollout has caught up.
 
 ---
 
+## 2b. Caller Identity
+
+Each row records who executed the workflow. Identity is resolved through the
+`WorkflowIdentityResolver` (by default the local Laravel guard), so these columns
+are populated the same way whether login is local or handled by an external
+service.
+
+| Column | Meaning |
+|---|---|
+| `user_id` | The **local** integer user id (Laravel guard / local users table). `null` for external subjects and anonymous callers. |
+| `external_user_id` | The external subject reference (e.g. an SSO/UUID `sub`) when login is handled by another service and there is no local user row. `null` for local users. |
+| `sso_provider_alias` | The SSO provider that resolved the identity, or `null` for local / explicitly-supplied identities. |
+
+A local login populates `user_id`; an external login populates `external_user_id`
++ `sso_provider_alias`; an anonymous run leaves all three `null`.
+
+---
+
 ## 3. Log Pruning and Maintenance
 
 You can configure automatic retention rules in `config/hashtagcms-workflows.php`:

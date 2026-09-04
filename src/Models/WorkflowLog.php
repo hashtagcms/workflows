@@ -3,6 +3,7 @@
 namespace HashtagCms\Workflows\Models;
 
 use HashtagCms\Models\AdminBaseModel;
+use HashtagCms\Core\Scopes\SiteScope;
 
 class WorkflowLog extends AdminBaseModel
 {
@@ -16,4 +17,15 @@ class WorkflowLog extends AdminBaseModel
         'negotiation' => 'array',
         'is_success' => 'boolean'
     ];
+
+    /**
+     * @override
+     * boot
+     */
+    protected static function boot()
+    {
+
+        parent::boot();
+        static::addGlobalScope(new SiteScope);
+    }
 }

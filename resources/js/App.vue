@@ -33,6 +33,18 @@
         <label class="wfb-check"><input type="checkbox" v-model="authBool" /> Requires login (Sanctum)</label>
       </div>
 
+      <!-- Identity provider (SSO) — which provider verifies the caller's token -->
+      <div v-if="ssoModuleActive" class="wfb-field">
+        <span>Identity provider <em>(SSO)</em></span>
+        <select v-model="form.sso_provider_alias" class="mono">
+          <option :value="ssoNoneValue">None — ignore SSO (local login only)</option>
+          <option v-for="p in ssoProviders" :key="p.alias" :value="p.alias">
+            {{ p.name }} ({{ p.alias }} · {{ p.driver }}){{ p.is_master ? ' — master site' : '' }}
+          </option>
+        </select>
+        <small class="wfb-help" :class="{ 'wfb-help-warn': identityWarn }">{{ identityIndicator }}</small>
+      </div>
+
       <!-- Visual builder -->
       <div v-show="mode === 'visual'" :key="visualKey" class="wfb-sections">
         <section class="wfb-sec">
@@ -102,6 +114,10 @@ export default {
       backUrl: i.backUrl || '',
       csrf: i.csrf || '',
       siteId: i.site_id || null,
+      ssoModuleActive: !!i.sso_module_active,
+      ssoProviders: Array.isArray(i.sso_providers) ? i.sso_providers : [],
+      ssoDefaultAlias: i.sso_default_alias || '',
+      ssoNoneValue: i.sso_none_value || '@none',
       form: {
         id: i.id || 0,
         name: i.name || '',
@@ -109,6 +125,10 @@ export default {
         description: i.description || '',
         handler: i.handler || '',
         auth_required: i.auth_required ? 1 : 0,
+        // No "Auto" option: an unpinned workflow defaults to the site's default
+        // provider (concrete), so which provider runs is always explicit. An
+        // explicit `@none` or a specific alias is preserved as-is.
+        sso_provider_alias: i.sso_provider_alias || i.sso_default_alias || '',
         publish_status: i.publish_status === 0 ? 0 : 1,
       },
       config: this.cloneConfig(i.config),
@@ -131,6 +151,36 @@ export default {
     authBool: {
       get() { return !!this.form.auth_required; },
       set(v) { this.form.auth_required = v ? 1 : 0; },
+    },
+    ssoIsNone() {
+      return this.form.sso_provider_alias === this.ssoNoneValue;
+    },
+    effectiveProvider() {
+      if (this.ssoIsNone) return '';
+      return this.form.sso_provider_alias || this.ssoDefaultAlias || '';
+    },
+    identityIndicator() {
+      if (!this.ssoModuleActive) return '';
+      if (this.ssoIsNone) {
+        return this.form.auth_required
+          ? 'SSO is ignored for this workflow — identity comes from local login only, so external (token) callers get a 401.'
+          : 'SSO is ignored for this workflow — identity comes from local login only (no provider is used).';
+      }
+      if (this.form.sso_provider_alias) {
+        let s = 'Identity is resolved by provider “' + this.form.sso_provider_alias + '”.';
+        if (this.form.sso_provider_alias === this.ssoDefaultAlias) s += ' (this site’s default)';
+        return s;
+      }
+      // No provider applies to this site (none selectable).
+      return this.form.auth_required
+        ? 'No SSO provider applies to this site — local login only, so external (token) callers get a 401.'
+        : 'No SSO provider applies to this site — identity falls back to local login.';
+    },
+    identityWarn() {
+      if (!this.ssoModuleActive) return false;
+      if (this.ssoIsNone) return !!this.form.auth_required;
+      if (!this.effectiveProvider && this.form.auth_required) return true;
+      return false;
     },
     hasTarget() {
       const t = this.config && this.config.target;
@@ -215,6 +265,7 @@ export default {
       body.set('description', this.form.description || '');
       body.set('handler', this.form.handler || '');
       body.set('auth_required', this.form.auth_required ? '1' : '0');
+      body.set('sso_provider_alias', this.form.sso_provider_alias || '');
       body.set('publish_status', this.form.publish_status ? '1' : '0');
       body.set('config', JSON.stringify(this.config));
       if (this.siteId) body.set('site_id', this.siteId);
@@ -248,8 +299,8 @@ export default {
 .wfb-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .wfb-field { display: flex; flex-direction: column; gap: 6px; }
 .wfb-field > span { font-size: 12px; font-weight: 600; color: #334155; }
-.wfb-field input, .wfb-field textarea { width: 100%; box-sizing: border-box; border: 1px solid #cbd5e1; border-radius: 10px; padding: 10px 12px; font-size: 12px; color: #0f172a; background: #fff; outline: none; }
-.wfb-field input:focus, .wfb-field textarea:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,.12); }
+.wfb-field input, .wfb-field textarea, .wfb-field select { width: 100%; box-sizing: border-box; border: 1px solid #cbd5e1; border-radius: 10px; padding: 10px 12px; font-size: 12px; color: #0f172a; background: #fff; outline: none; }
+.wfb-field input:focus, .wfb-field textarea:focus, .wfb-field select:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,.12); }
 .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
 .wfb-sections { display: flex; flex-direction: column; gap: 18px; }
 .wfb-sec { display: flex; flex-direction: column; gap: 12px; }
@@ -260,6 +311,7 @@ export default {
 .wfb-check { font-size: 12px; color: #334155; display: flex; align-items: center; gap: 6px; }
 .wfb-help { font-size: 10px; color: #94a3b8; line-height: 1.5; }
 .wfb-help code { background: #f1f5f9; border-radius: 4px; padding: 1px 4px; }
+.wfb-help-warn { color: #b45309; font-weight: 600; }
 .wfb-field > span em { color: #94a3b8; font-style: normal; font-weight: 400; }
 .wfb-err { color: #dc2626; font-size: 12px; margin: 0; }
 .wfb-foot { display: flex; align-items: center; justify-content: space-between; padding: 18px 28px; border-top: 1px solid #f1f5f9; background: #f8fafc; }

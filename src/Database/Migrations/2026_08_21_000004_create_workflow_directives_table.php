@@ -19,7 +19,7 @@ return new class extends Migration
                 $table->string('category')->nullable();      // 'cart' | 'navigation' | 'feedback'
                 $table->text('description')->nullable();
                 $table->json('platforms')->nullable();       // { "web":"1.0", "android":"2.1", "ios":"2.1" }
-                $table->json('schema')->nullable();          // payload field spec (validation + Playground)
+                $table->json('schema')->nullable();          // payload field spec (used for validation)
                 $table->string('fallback')->nullable();      // another directive `type` to substitute
                 $table->boolean('is_core')->default(false);  // package-shipped vs app-registered
                 $table->boolean('publish_status')->default(true);

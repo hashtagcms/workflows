@@ -25,9 +25,10 @@ class FakeWorkflows
         int $siteId = 1,
         ?string $platform = 'android',
         ?string $appVersion = null,
-        array $capabilities = []
+        array $capabilities = [],
+        mixed $identity = null
     ): WorkflowResponse {
-        $this->lastCall = compact('alias', 'payload', 'siteId', 'platform', 'appVersion', 'capabilities');
+        $this->lastCall = compact('alias', 'payload', 'siteId', 'platform', 'appVersion', 'capabilities', 'identity');
 
         if ($this->throw !== null) {
             throw $this->throw;

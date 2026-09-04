@@ -6,13 +6,21 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use HashtagCms\Core\Helpers\Message;
-use HashtagCms\Workflows\Models\WorkflowDirective;
+use HashtagCms\Workflows\Models\WorkflowSsoProvider;
 
-class WorkflowDirectiveController extends AdminWorkflowBaseController
+/**
+ * Admin CRUD for SSO / external-login providers (Workflows → SSO Providers).
+ *
+ * A provider row tells the SsoIdentityResolver how to verify a client credential
+ * and map it to a workflow identity. The verification detail lives in the `config`
+ * JSON (a `verify` request formatter + an `identity` response formatter); this
+ * screen manages the row-level fields plus that JSON.
+ */
+class WorkflowSsoProviderController extends AdminWorkflowBaseController
 {
-    protected $dataFields = ['id', 'type', 'label', 'category', 'fallback', 'publish_status', 'updated_at'];
+    protected $dataFields = ['id', 'name', 'alias', 'driver', 'enabled', 'on_failure', 'publish_status', 'updated_at'];
 
-    protected $dataSource = WorkflowDirective::class;
+    protected $dataSource = WorkflowSsoProvider::class;
 
     protected $actionFields = ['edit', 'delete'];
 
@@ -27,19 +35,21 @@ class WorkflowDirectiveController extends AdminWorkflowBaseController
         $editId = $data['id'] ?? null;
         $siteId = $data['site_id'] ?? htcms_get_siteId_for_admin();
 
-        $typeRule = Rule::unique('workflow_directives', 'type')->where('site_id', $siteId);
+        // Alias is unique per site (mirrors the workflows table), not globally.
+        $aliasRule = Rule::unique('workflow_sso_providers', 'alias')->where('site_id', $siteId);
         if ($isEdit && $editId) {
-            $typeRule = $typeRule->ignore($editId);
+            $aliasRule = $aliasRule->ignore($editId);
         }
 
         $validator = Validator::make($data, [
-            'type' => ['required', 'string', 'max:100', $typeRule],
-            'label' => 'required|string|max:255',
-            'category' => 'nullable|string|max:100',
+            'name' => 'required|string|max:255',
+            'alias' => ['required', 'string', 'max:255', 'regex:/^[A-Za-z0-9._-]+$/', $aliasRule],
+            'driver' => ['required', Rule::in(['opaque', 'jwt'])],
+            'on_failure' => ['required', Rule::in(['reject', 'anonymous'])],
+            'cache_ttl' => 'nullable|integer|min:0',
             'description' => 'nullable|string',
-            'platforms' => 'nullable',
-            'schema' => 'nullable',
-            'fallback' => 'nullable|string|max:100',
+            'config' => 'nullable',
+            'enabled' => 'nullable|boolean',
             'publish_status' => 'nullable|boolean',
         ]);
 
@@ -49,30 +59,24 @@ class WorkflowDirectiveController extends AdminWorkflowBaseController
                 ->withInput();
         }
 
-        $platforms = $this->decodeJsonField($data['platforms'] ?? null);
-        if ($platforms === false) {
+        $config = $this->decodeJsonField($data['config'] ?? null);
+        if ($config === false) {
             return redirect()->back()
-                ->withErrors(['platforms' => 'Invalid JSON in Platforms map: ' . json_last_error_msg()])
-                ->withInput();
-        }
-
-        $schema = $this->decodeJsonField($data['schema'] ?? null);
-        if ($schema === false) {
-            return redirect()->back()
-                ->withErrors(['schema' => 'Invalid JSON in Payload Schema: ' . json_last_error_msg()])
+                ->withErrors(['config' => 'Invalid JSON in Provider Config: ' . json_last_error_msg()])
                 ->withInput();
         }
 
         $saveData = [
             'site_id' => $siteId,
-            'type' => trim($data['type']),
-            'label' => $data['label'],
-            'category' => $data['category'] ?? null,
+            'name' => $data['name'],
+            'alias' => trim($data['alias']),
             'description' => $data['description'] ?? null,
-            'platforms' => $platforms,
-            'schema' => $schema,
-            'fallback' => $data['fallback'] ?: null,
-            'publish_status' => isset($data['publish_status']) ? (int)$data['publish_status'] : 1,
+            'driver' => $data['driver'],
+            'on_failure' => $data['on_failure'],
+            'cache_ttl' => isset($data['cache_ttl']) ? (int) $data['cache_ttl'] : 300,
+            'config' => $config,
+            'enabled' => isset($data['enabled']) ? (int) $data['enabled'] : 0,
+            'publish_status' => isset($data['publish_status']) ? (int) $data['publish_status'] : 1,
             'updated_at' => htcms_get_current_date(),
         ];
 
@@ -93,7 +97,7 @@ class WorkflowDirectiveController extends AdminWorkflowBaseController
 
         $viewData['id'] = $savedData['id'];
         $viewData['saveData'] = $data;
-        $viewData['backURL'] = $data['backURL'] ?? htcms_admin_path('workflows/directives');
+        $viewData['backURL'] = $data['backURL'] ?? htcms_admin_path('workflows/sso');
         $viewData['isSaved'] = $savedData['isSaved'];
 
         return htcms_admin_view('common.saveinfo', $viewData);
